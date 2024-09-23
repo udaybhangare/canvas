@@ -13,8 +13,8 @@ export default function DrawingPage() {
             <Canvas 
                 color={isEraser ? "black" : color} // Use black for eraser
                 brushSize={brushSize} 
-                width={800} 
-                height={600} 
+                // width={800} 
+                // height={600} 
                 className="border border-black" 
                 setColor={setColor}
                 setBrushSize={setBrushSize}

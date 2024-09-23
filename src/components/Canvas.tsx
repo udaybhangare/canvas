@@ -1,59 +1,73 @@
+
+
+
+'use client';
+
 import { useRef, useState, useEffect } from 'react';
 import BrushControl from './BrushControls'; // Adjust the path as necessary
 
 interface CanvasProps {
   color: string;
   brushSize: number;
-  width: number;
-  height: number;
   className?: string; // Make className optional
   setColor: (color: string) => void;
   setBrushSize: (size: number) => void;
   setIsEraser: (isEraser: boolean) => void; // Add a setter for eraser state
 }
 
-const Canvas: React.FC<CanvasProps> = ({ color, brushSize, width, height, className, setColor, setBrushSize, setIsEraser }) => {
+const Canvas: React.FC<CanvasProps> = ({ color, brushSize, className, setColor, setBrushSize, setIsEraser }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
+  
+  const [dimensions, setDimensions] = useState({ width: window.innerWidth, height: window.innerHeight });
 
-  // Effect to set the black background once
+  useEffect(() => {
+    const handleResize = () => {
+      setDimensions({ width: window.innerWidth, height: window.innerHeight });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return; // Safely exit if canvas is null
+    if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
-    if (!ctx) return; // Safely exit if context is null
+    if (!ctx) return;
 
-    // Fill the canvas with a black background
+    // Resize canvas and fill it with a black background
+    canvas.width = dimensions.width;
+    canvas.height = dimensions.height;
     ctx.fillStyle = 'black';
-    ctx.fillRect(0, 0, width, height);
-  }, [width, height]); // Only run when width or height changes
+    ctx.fillRect(0, 0, dimensions.width, dimensions.height);
+  }, [dimensions]);
 
-  // Effect for drawing functionality
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return; // Safely exit if canvas is null
+    if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
-    if (!ctx) return; // Safely exit if context is null
+    if (!ctx) return;
 
     const startDrawing = (event: MouseEvent) => {
-      if (event.button !== 0) return; // Only draw on left mouse button
+      if (event.button !== 0) return;
       setIsDrawing(true);
-      ctx.strokeStyle = color; // Set the stroke color
-      ctx.lineWidth = brushSize; // Set the brush size
+      ctx.strokeStyle = color;
+      ctx.lineWidth = brushSize;
       ctx.beginPath();
-      ctx.moveTo(event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop);
+      ctx.moveTo(event.clientX, event.clientY);
     };
 
     const draw = (event: MouseEvent) => {
       if (!isDrawing) return;
-      ctx.lineTo(event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop);
+      ctx.lineTo(event.clientX, event.clientY);
       ctx.stroke();
     };
 
     const stopDrawing = (event: MouseEvent) => {
-      if (event.button !== 0) return; // Only stop drawing on left mouse button release
+      if (event.button !== 0) return;
       setIsDrawing(false);
       ctx.closePath();
     };
@@ -62,7 +76,7 @@ const Canvas: React.FC<CanvasProps> = ({ color, brushSize, width, height, classN
     canvas.addEventListener('mousedown', startDrawing);
     canvas.addEventListener('mousemove', draw);
     canvas.addEventListener('mouseup', stopDrawing);
-    canvas.addEventListener('mouseleave', stopDrawing); // Stop drawing if mouse leaves the canvas
+    canvas.addEventListener('mouseleave', stopDrawing);
 
     return () => {
       // Clean up event listeners
@@ -71,28 +85,65 @@ const Canvas: React.FC<CanvasProps> = ({ color, brushSize, width, height, classN
       canvas.removeEventListener('mouseup', stopDrawing);
       canvas.removeEventListener('mouseleave', stopDrawing);
     };
-  }, [isDrawing, color, brushSize]); // Add isDrawing, color, and brushSize to dependencies
+  }, [isDrawing, color, brushSize]);
+
+  // Clear canvas function
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Clear the canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Fill with black background again
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  };
 
   return (
     <div>
       <BrushControl 
-      setColor={setColor} 
-      setBrushSize={setBrushSize} 
-      setIsEraser={setIsEraser}
-      style={{ 
-        position: 'absolute', 
-        top: '10px', // Position from the top
-        left: '50%', 
-        transform: 'translateX(-50%)', // Center horizontally
-        zIndex: 10, 
-        backgroundColor: 'rgba(255, 255, 255, 0.7)', // Semi-transparent white
-        padding: '10px', 
-        borderRadius: '8px',
-        backdropFilter: 'blur(10px)' // Optional: adds a blur effect behind the component
-       }} />
-      <canvas ref={canvasRef} width={width} height={height} className={className} />
+        setColor={setColor} 
+        setBrushSize={setBrushSize} 
+        setIsEraser={setIsEraser}
+        style={{ 
+          position: 'absolute', 
+          top: '10px', 
+          left: '50%', 
+          transform: 'translateX(-50%)', 
+          zIndex: 10, 
+          backgroundColor: 'rgba(255, 255, 255, 0.7)', 
+          padding: '10px', 
+          borderRadius: '8px',
+          backdropFilter: 'blur(10px)' 
+        }} 
+      />
+      <button 
+        onClick={clearCanvas} 
+        style={{
+          position: 'absolute',
+          top: '10px', 
+          right: '10px',
+          padding: '5px 10px', 
+          backgroundColor: '#ffcc00', // Yellow color for the clear button
+          color: '#fff', 
+          border: 'none', 
+          borderRadius: '4px', 
+          cursor: 'pointer',
+          transition: 'background-color 0.3s',
+          zIndex: 10,
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#e6b800'} // Darker yellow on hover
+        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ffcc00'} // Original yellow on leave
+      >
+        Clear Canvas
+      </button>
+      <canvas ref={canvasRef} className={className} />
     </div>
   );
 };
+
 
 export default Canvas;
